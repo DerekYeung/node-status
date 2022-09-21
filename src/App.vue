@@ -22,7 +22,7 @@ import HelloWorld from './components/HelloWorld.vue'
         <p>
           Peer：{{item.peer}}
         </p>
-        <p>公式客户端：{{JSON.stringify(item.cs)}}</p>
+        <p>共识客户端：{{JSON.stringify(item.cs)}}</p>
       </div>
     </div>
   </div>
@@ -60,36 +60,39 @@ export default defineComponent({
     this.ip = window.location.hostname;
   },
   methods: {
-    watchNode(ip) {
+    async watchNode(ip) {
       if (!ip) {
         return;
       }
-      if (!this.watchList[ip]) {
+      let node = this.watchList[ip];
+      if (!node) {
         const web3 = new Web3(new Web3.providers.WebsocketProvider(`ws://${ip}:8892`));
-        const node = {
+        node = {
           ip,
-          web3
+          web3,
+          blockNumber: 0,
+          isSyncing: false,
+          peer: 0,
+          cs: null
         };
-        this.watchList[ip] = node;
-        setInterval(() => {
-          this.getGethStatus(node);
-          this.getCsStatus(node);
-        }, 1000);
-        // web3.eth.getBlockNumber().then(n => console.log('block number', n));
-        // web3.eth.isSyncing().then(n => console.log('syncing', n));
-        //       const web3 = new 
-        // this.watchList[ip]
       }
+      await this.getGethStatus(node);
+      await this.getCsStatus(node);
+      this.watchList[ip] = node;
+      setTimeout(() => {
+        this.watchNode(ip);
+      }, 1000);
     },
     async getGethStatus(node) {
       try {
         const blockNumber = await node.web3.eth.getBlockNumber();
         const isSyncing = await node.web3.eth.isSyncing();
-        const peer = await web3.eth.net.getPeerCount();
+        const peer = await node.web3.eth.net.getPeerCount();
         node.blockNumber = blockNumber || 0;
         node.isSyncing = isSyncing;
         node.peer = peer || 0;
       } catch (e) {
+        console.log(e.message);
         return null;
       }
     },

@@ -8,6 +8,10 @@ import HelloWorld from './components/HelloWorld.vue'
   <div>
     <input v-model="ip" />
     <button @click="watchNode(ip)">监听</button>
+    <button @click="watchNode('192.168.1.201')">监听1号</button>
+    <button @click="watchNode('192.168.1.202')">监听2号</button>
+    <button @click="watchNode('192.168.1.203')">监听3号</button>
+    <button @click="watchNode('192.168.1.204')">监听4号</button>
     <div class="nodes">
       <div class="node" v-for="(item, index) in watchList" :key="index">
         <p>
@@ -23,6 +27,7 @@ import HelloWorld from './components/HelloWorld.vue'
           Peer：{{item.peer}}
         </p>
         <p>共识客户端：{{JSON.stringify(item.cs)}}</p>
+        <button @click="unwatchNode(item.ip)">取消监听</button>
       </div>
     </div>
   </div>
@@ -57,9 +62,15 @@ export default defineComponent({
     }
   },
   mounted() {
-    this.ip = window.location.hostname;
   },
   methods: {
+    unwatchNode(ip) {
+      const node = this.watchList[ip];
+      delete this.watchList[ip];
+      if (node.timer) {
+        clearTimeout(node.timer);
+      }
+    },
     async watchNode(ip) {
       if (!ip) {
         return;
@@ -75,13 +86,14 @@ export default defineComponent({
           peer: 0,
           cs: null
         };
+        this.watchList[ip] = node;
       }
       await this.getGethStatus(node);
       await this.getCsStatus(node);
-      this.watchList[ip] = node;
-      setTimeout(() => {
+      node.timer = setTimeout(() => {
         this.watchNode(ip);
       }, 1000);
+      this.watchList[ip] = node;
     },
     async getGethStatus(node) {
       try {
